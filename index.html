@@ -2,21 +2,73 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Crawler de Filmes</title>
-  <script src="crawler.js" defer></script>
+  <title>Buscador de Filmes</title>
 </head>
 <body>
-  <h1>Crawler de Páginas</h1>
-  <button onclick="startCrawler()">Rodar Crawler</button>
+  <h1>Buscador de Relações entre Filmes</h1>
+
+  <input type="text" id="busca" placeholder="Digite o nome do filme (ex: blade_runner.html)" />
+  <button onclick="buscar()">Buscar</button>
+
   <table border="1">
     <thead>
       <tr>
         <th>Página</th>
-        <th>Quem Aponta</th>
-        <th>Quantidade de Links</th>
+        <th>Quem aponta</th>
+        <th>Quantidade de links</th>
       </tr>
     </thead>
-    <tbody id="resultado-tabela"></tbody>
+    <tbody id="resultado"></tbody>
   </table>
+
+  <script>
+    const paginas = [
+      "blade_runner.html",
+      "duna.html",
+      "interestelar.html",
+      "matrix.html",
+      "mochileiro.html"
+    ];
+
+    const indiceReverso = {}; // destino => [origens]
+
+    async function carregarLinks() {
+      for (const origem of paginas) {
+        const resposta = await fetch(origem);
+        const texto = await resposta.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(texto, "text/html");
+
+        const links = Array.from(doc.querySelectorAll("a")).map(a => a.getAttribute("href"));
+
+        for (const destino of links) {
+          if (!indiceReverso[destino]) {
+            indiceReverso[destino] = [];
+          }
+          indiceReverso[destino].push(origem);
+        }
+      }
+    }
+
+    async function buscar() {
+      const termo = document.getElementById("busca").value;
+      const resultado = document.getElementById("resultado");
+      resultado.innerHTML = "";
+
+      if (Object.keys(indiceReverso).length === 0) {
+        await carregarLinks();
+      }
+
+      const apontadores = indiceReverso[termo] || [];
+
+      resultado.innerHTML = `
+        <tr>
+          <td>${termo}</td>
+          <td>${apontadores.join(", ") || "Nenhum"}</td>
+          <td>${apontadores.length}</td>
+        </tr>
+      `;
+    }
+  </script>
 </body>
 </html>
