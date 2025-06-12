@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Crawler</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    table, th, td { border: 1px solid black; border-collapse: collapse; padding: 8px; }
+    th { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+
+  <h1>Mini Crawler de Filmes</h1>
+  <p>Pressione o botão abaixo para analisar os arquivos HTML:</p>
+  <button onclick="analisarLinks()">Analisar Páginas</button>
+
+  <table id="resultado" style="margin-top: 20px; display: none;">
+    <thead>
+      <tr>
+        <th>Página</th>
+        <th>Apontada por</th>
+        <th>Total de Referências</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const arquivos = [
+      "blade_runner.html",
+      "matrix.html",
+      "duna.html",
+      "interestelar.html",
+      "mochileiro.html"
+    ];
+
+    async function analisarLinks() {
+      const apontadores = {}; // página => [quem aponta]
+      const conteudos = {};
+
+      // 1. Carregar todos os arquivos
+      for (const arquivo of arquivos) {
+        try {
+          const resposta = await fetch(arquivo);
+          const html = await resposta.text();
+          conteudos[arquivo] = html;
+        } catch (err) {
+          console.error(`Erro ao carregar ${arquivo}`);
+        }
+      }
+
+      // 2. Ver quem aponta para quem
+      for (const origem in conteudos) {
+        const html = conteudos[origem];
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, "text/html");
+        const links = doc.querySelectorAll("a");
+
+        links.forEach(link => {
+          const destino = link.getAttribute("href");
+          if (arquivos.includes(destino)) {
+            if (!apontadores[destino]) apontadores[destino] = [];
+            apontadores[destino].push(origem);
+          }
+        });
+      }
+
+      // 3. Mostrar resultado
+      const tbody = document.querySelector("#resultado tbody");
+      tbody.innerHTML = "";
+
+      arquivos.forEach(pagina => {
+        const apontadaPor = apontadores[pagina] || [];
+        const linha = `
+          <tr>
+            <td>${pagina}</td>
+            <td>${apontadaPor.join(", ") || "-"}</td>
+            <td>${apontadaPor.length}</td>
+          </tr>
+        `;
+        tbody.innerHTML += linha;
+      });
+
+      document.getElementById("resultado").style.display = "table";
+    }
+  </script>
+
+</body>
+</html>
